@@ -8,5 +8,9 @@
             "email": "djahilang133@gmail.com"
         }
     ],
-    "require": {}
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "rizaas/rcci": "^1.0"
+    }
 }
