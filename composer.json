@@ -10,7 +10,9 @@
     ],
     "minimum-stability": "stable",
     "prefer-stable": true,
-    "require": {},
+    "require": {
+        "psr/log": "^1.1"
+    },
     "autoload": {
         "psr-4": {
             "rizaas\\": ""
