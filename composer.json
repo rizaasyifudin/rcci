@@ -11,8 +11,7 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
-        "psr/log": "^1.1",
-        "rizaas/rcci": "1.0.0"
+        "psr/log": "^1.1"
     },
     "autoload": {
         "psr-4": {
