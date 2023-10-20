@@ -10,5 +10,10 @@
     ],
     "minimum-stability": "stable",
     "prefer-stable": true,
-    "require": {}
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "rizaas\\": ""
+        }
+    }
 }
