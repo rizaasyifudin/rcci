@@ -1,0 +1,11 @@
+{
+    "name": "rc/rcci",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Riza As",
+            "email": "djahilang133@gmail.com"
+        }
+    ],
+    "require": {}
+}
