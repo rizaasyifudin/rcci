@@ -9,7 +9,7 @@
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace App\Libraries\ModelCustom;
+namespace CodeIgniter;
 
 use Closure;
 use CodeIgniter\Database\BaseConnection;
