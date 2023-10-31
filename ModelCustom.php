@@ -1,6 +1,6 @@
 <?php
 
-namespace CodeIgniter;
+namespace App\Libraries\ModelCustom;
 
 use BadMethodCallException;
 
@@ -373,9 +373,17 @@ class ModelCustom extends BaseModelCustom
 
         return $builder;
     }
-
+    public function except($data = null)
+    {
+        // dd($data);
+        if ($data) {
+            $this->tempData['exceptHtmlspecialChar'] = $data;
+        }
+        return $this;
+    }
     public function set($key, $value = '', ?bool $escape = null)
     {
+
         $data = is_array($key) ? $key : [$key => $value];
 
         foreach (array_keys($data) as $k) {
@@ -383,7 +391,6 @@ class ModelCustom extends BaseModelCustom
         }
 
         $this->tempData['data'] = array_merge($this->tempData['data'] ?? [], $data);
-
         return $this;
     }
 
@@ -402,8 +409,12 @@ class ModelCustom extends BaseModelCustom
         return $this->where($this->primaryKey, $this->getIdValue($data))->countAllResults() === 1;
     }
 
-    public function insert($data = null, bool $returnID = true)
+    public function insert($data = null, bool $returnID = true, $except = null)
     {
+        if (!empty($this->tempData['exceptHtmlspecialChar'])) {
+            $except = $this->tempData['exceptHtmlspecialChar'];
+        }
+
         if (!empty($this->tempData['data'])) {
             if (empty($data)) {
                 $data = $this->tempData['data'];
@@ -424,10 +435,10 @@ class ModelCustom extends BaseModelCustom
         $this->escape   = $this->tempData['escape'] ?? [];
         $this->tempData = [];
 
-        return parent::insert($data, $returnID);
+        return parent::insert($data, $returnID, $except);
     }
 
-    public function update($id = null, $data = null): bool
+    public function update($id = null, $data = null, $except = null): bool
     {
         if (!empty($this->tempData['data'])) {
             if (empty($data)) {
@@ -437,11 +448,14 @@ class ModelCustom extends BaseModelCustom
                 $data = array_merge($this->tempData['data'], $data);
             }
         }
+        if (!empty($this->tempData['exceptHtmlspecialChar'])) {
+            $except = $this->tempData['exceptHtmlspecialChar'];
+        }
 
         $this->escape   = $this->tempData['escape'] ?? [];
         $this->tempData = [];
 
-        return parent::update($id, $data);
+        return parent::update($id, $data, $except);
     }
 
     protected function objectToRawArray($data, bool $onlyChanged = true, bool $recursive = false): ?array
