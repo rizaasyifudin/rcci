@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Libraries\ModelCustom;
+namespace CodeIgniter;
 
 use BadMethodCallException;
 
