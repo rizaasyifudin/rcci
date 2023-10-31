@@ -9,7 +9,7 @@
  * the LICENSE file that was distributed with this source code.
  */
 
-namespace CodeIgniter;
+namespace App\Libraries\ModelCustom;
 
 use Closure;
 use CodeIgniter\Database\BaseConnection;
@@ -375,6 +375,7 @@ abstract class BaseModelCustom
      * @throws DatabaseException
      */
     abstract protected function doUpdateBatch(?array $set = null, ?string $index = null, int $batchSize = 100, bool $returnSQL = false);
+    abstract protected function except($data = "asdasd");
 
     /**
      * Deletes a single record from the database where $id matches.
@@ -629,11 +630,10 @@ abstract class BaseModelCustom
         if (empty($data)) {
             return true;
         }
-
         if ($this->shouldUpdate($data)) {
-            $response = $this->update($this->getIdValue($data), $data);
+            $response = $this->update($this->getIdValue($data), $data, null);
         } else {
-            $response = $this->insert($data, false);
+            $response = $this->insert($data, false, null);
 
             if ($response !== false) {
                 $response = true;
@@ -643,43 +643,30 @@ abstract class BaseModelCustom
         return $response;
     }
 
-    /**
-     * This method is called on save to determine if entry have to be updated.
-     * If this method returns false insert operation will be executed
-     *
-     * @param array|object $data Data
-     */
     protected function shouldUpdate($data): bool
     {
         return !empty($this->getIdValue($data));
     }
 
-    /**
-     * Returns last insert ID or 0.
-     *
-     * @return int|string
-     */
     public function getInsertID()
     {
         return is_numeric($this->insertID) ? (int) $this->insertID : $this->insertID;
     }
 
-    /**
-     * Inserts data into the database. If an object is provided,
-     * it will attempt to convert it to an array.
-     *
-     * @param array|object|null $data     Data
-     * @param bool              $returnID Whether insert ID should be returned or not.
-     *
-     * @return bool|int|string insert ID or true on success. false on failure.
-     *
-     * @throws ReflectionException
-     */
-    public function insert($data = null, bool $returnID = true)
+    public function insert($data = null, bool $returnID = true, $except = null)
     {
-        foreach ($data as $key => $value) {
-            $data[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+        if ($data) {
+            foreach ($data as $key => $value) {
+                if ($except) {
+                    if (!in_array($key, $except)) {
+                        $data[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+                    }
+                } else {
+                    $data[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+                }
+            }
         }
+        // dd($except);
         $this->insertID = 0;
 
         // Set $cleanValidationRules to false temporary.
@@ -749,43 +736,39 @@ abstract class BaseModelCustom
         // otherwise return the insertID, if requested.
         return $returnID ? $this->insertID : $result;
     }
-
-    /**
-     * Compiles batch insert runs the queries, validating each row prior.
-     *
-     * @param array|null $set       an associative array of insert values
-     * @param bool|null  $escape    Whether to escape values
-     * @param int        $batchSize The size of the batch to run
-     * @param bool       $testing   True means only number of records is returned, false will execute the query
-     *
-     * @return bool|int Number of rows inserted or FALSE on failure
-     *
-     * @throws ReflectionException
-     */
     public function insertBatch(?array $set = null, ?bool $escape = null, int $batchSize = 100, bool $testing = false)
     {
-        // Set $cleanValidationRules to false temporary.
+        $except = null;
+        $ex = $this->except();
+        if (isset($ex->tempData['exceptHtmlspecialChar'])) {
+            $except = $ex->tempData['exceptHtmlspecialChar'];
+        }
+
         $cleanValidationRules       = $this->cleanValidationRules;
         $this->cleanValidationRules = false;
 
         if (is_array($set)) {
             foreach ($set as &$row) {
+                if ($row) {
+                    foreach ($row as $key => $value) {
+                        if ($except) {
+                            if (!in_array($key, $except)) {
+                                $row[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+                            }
+                        } else {
+                            $row[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+                        }
+                    }
+                }
 
-                // If $data is using a custom class with public or protected
-                // properties representing the collection elements, we need to grab
-                // them as an array.
                 if (is_object($row) && !$row instanceof stdClass) {
                     $row = $this->objectToArray($row, false, true);
                 }
 
-                // If it's still a stdClass, go ahead and convert to
-                // an array so doProtectFields and other model methods
-                // don't have to do special checks.
                 if (is_object($row)) {
                     $row = (array) $row;
                 }
 
-                // Validate every row.
                 if (!$this->skipValidation && !$this->validate($row)) {
                     // Restore $cleanValidationRules
                     $this->cleanValidationRules = $cleanValidationRules;
@@ -793,11 +776,8 @@ abstract class BaseModelCustom
                     return false;
                 }
 
-                // Must be called first so we don't
-                // strip out created_at values.
                 $row = $this->doProtectFields($row);
 
-                // Set created_at and updated_at with same time
                 $date = $this->setDate();
 
                 if ($this->useTimestamps && $this->createdField && !array_key_exists($this->createdField, $row)) {
@@ -835,21 +815,20 @@ abstract class BaseModelCustom
 
         return $result;
     }
-
-    /**
-     * Updates a single record in the database. If an object is provided,
-     * it will attempt to convert it into an array.
-     *
-     * @param array|int|string|null $id
-     * @param array|object|null     $data
-     *
-     * @throws ReflectionException
-     */
-    public function update($id = null, $data = null): bool
+    public function update($id = null, $data = null, $except = null): bool
     {
-        foreach ($data as $key => $value) {
-            $row[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+        if ($data) {
+            foreach ($data as $key => $value) {
+                if ($except) {
+                    if (!in_array($key, $except)) {
+                        $data[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+                    }
+                } else {
+                    $data[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+                }
+            }
         }
+        // dd($except);
         if (is_bool($id)) {
             throw new InvalidArgumentException('update(): argument #1 ($id) should not be boolean.');
         }
@@ -902,24 +881,27 @@ abstract class BaseModelCustom
 
         return $eventData['result'];
     }
-
-    /**
-     * Compiles an update and runs the query.
-     *
-     * @param array|null  $set       An associative array of update values
-     * @param string|null $index     The where key
-     * @param int         $batchSize The size of the batch to run
-     * @param bool        $returnSQL True means SQL is returned, false will execute the query
-     *
-     * @return false|int|string[] Number of rows affected or FALSE on failure, SQL array when testMode
-     *
-     * @throws DatabaseException
-     * @throws ReflectionException
-     */
     public function updateBatch(?array $set = null, ?string $index = null, int $batchSize = 100, bool $returnSQL = false)
     {
+        $except = null;
+        $ex = $this->except();
+        if (isset($ex->tempData['exceptHtmlspecialChar'])) {
+            $except = $ex->tempData['exceptHtmlspecialChar'];
+        }
         if (is_array($set)) {
             foreach ($set as &$row) {
+                if ($row) {
+                    foreach ($row as $key => $value) {
+                        if ($except) {
+                            if (!in_array($key, $except)) {
+                                $row[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+                            }
+                        } else {
+                            $row[$key] = htmlspecialchars($value, ENT_NOQUOTES, 'UTF-8', false);
+                        }
+                    }
+                }
+
                 // If $data is using a custom class with public or protected
                 // properties representing the collection elements, we need to grab
                 // them as an array.
@@ -956,7 +938,6 @@ abstract class BaseModelCustom
                 }
             }
         }
-
         $eventData = ['data' => $set];
 
         if ($this->tempAllowCallbacks) {
@@ -979,17 +960,6 @@ abstract class BaseModelCustom
 
         return $result;
     }
-
-    /**
-     * Deletes a single record from the database where $id matches.
-     *
-     * @param array|int|string|null $id    The rows primary key(s)
-     * @param bool                  $purge Allows overriding the soft deletes setting.
-     *
-     * @return BaseResult|bool
-     *
-     * @throws DatabaseException
-     */
     public function delete($id = null, bool $purge = false)
     {
         if (is_bool($id)) {
@@ -1025,12 +995,6 @@ abstract class BaseModelCustom
         return $eventData['result'];
     }
 
-    /**
-     * Permanently deletes all rows that have been marked as deleted
-     * through soft deletes (deleted = 1).
-     *
-     * @return bool|string Returns a string if in test mode.
-     */
     public function purgeDeleted()
     {
         if (!$this->useSoftDeletes) {
@@ -1039,15 +1003,6 @@ abstract class BaseModelCustom
 
         return $this->doPurgeDeleted();
     }
-
-    /**
-     * Sets $useSoftDeletes value so that we can temporarily override
-     * the soft deletes settings. Can be used for all find* methods.
-     *
-     * @param bool $val Value
-     *
-     * @return $this
-     */
     public function withDeleted(bool $val = true)
     {
         $this->tempUseSoftDeletes = !$val;
@@ -1055,12 +1010,6 @@ abstract class BaseModelCustom
         return $this;
     }
 
-    /**
-     * Works with the find* methods to return only the rows that
-     * have been deleted.
-     *
-     * @return $this
-     */
     public function onlyDeleted()
     {
         $this->tempUseSoftDeletes = false;
